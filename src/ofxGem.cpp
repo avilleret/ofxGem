@@ -268,32 +268,32 @@ int ofxGem :: setPixels(ofPixels pix){
       return -1;
     }
 
-    if (pix.size()<=m_size) {
-      t_pixshare_header *h=(t_pixshare_header *)shm_addr;
-      h->size =pix.size();
-      h->xsize=pix.getWidth();
-      h->ysize=pix.getHeight();
-      switch (pix.getPixelFormat()){
-        case OF_PIXELS_MONO:
-          h->format = GL_LUMINANCE;
-          break;
-        case OF_PIXELS_RGBA:
-          h->format = GL_RGBA;
-          break;
-        case OF_PIXELS_YUY2:
-          h->format = GL_YCBCR_422_APPLE;
-          break;
-        default:
-          ofLog(OF_LOG_ERROR) << "format " << pix.getPixelFormat() << " is not supported (only OF_PIXELS_MONO, OF_PIXELS_RGBA or OF_PIXELS_YUY2)";
-          return -1;
-      }
+  if (pix.size()>m_size) {
+    ofLog(OF_LOG_VERBOSE) << "pixels data is bigger than shared memory, so we reallocate it";
+    getShm(m_fake, pix.getWidth(), pix.getHeight(), pix.getPixelFormat());
+  }
 
-      h->upsidedown=GL_TRUE;
-      memcpy(shm_addr+sizeof(t_pixshare_header),pix.getData(),pix.size());
-    }
-    else{
-      ofLog(OF_LOG_ERROR) << "input image too large: " << pix.getWidth() << "x" << pix.getHeight() << "x" << pix.getBytesPerPixel() << "=" << pix.size() << ">" << m_size;
-    }
+  t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
+  h->size =pix.size();
+  h->xsize=pix.getWidth();
+  h->ysize=pix.getHeight();
+  switch (pix.getPixelFormat()){
+    case OF_PIXELS_MONO:
+      h->format = GL_LUMINANCE;
+      break;
+    case OF_PIXELS_RGBA:
+      h->format = GL_RGBA;
+      break;
+    case OF_PIXELS_YUY2:
+      h->format = GL_YCBCR_422_APPLE;
+      break;
+    default:
+      ofLog(OF_LOG_ERROR) << "format " << pix.getPixelFormat() << " is not supported (only OF_PIXELS_MONO, OF_PIXELS_RGBA or OF_PIXELS_YUY2)";
+      return -1;
+  }
+
+  h->upsidedown=GL_TRUE;
+  memcpy(m_shm_addr+sizeof(t_pixshare_header),pix.getData(),pix.size());
   }
   return 0;
 }
