@@ -6,7 +6,8 @@ ofxGem :: ofxGem() :
 #else
   m_shm_id(0),
 #endif
-  m_size(0)
+  m_size(0),
+  m_fake(0)
 {}
 
 ofxGem :: ~ofxGem(){
