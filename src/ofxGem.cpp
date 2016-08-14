@@ -1,10 +1,10 @@
 #include "ofxGem.h"
 
 ofxGem :: ofxGem() :
-  shm_addr(NULL),
+  m_shm_addr(NULL),
 #ifdef _WIN32
 #else
-  shm_id(0),
+  m_shm_id(0),
 #endif
   m_size(0)
 {}
@@ -16,7 +16,7 @@ ofxGem :: ~ofxGem(){
 void ofxGem :: setup(float id, int width, int height, int color)
 {
 #ifndef _WIN32
-  memset(&shm_desc, 0, sizeof(shm_desc));
+  memset(&m_shm_desc, 0, sizeof(m_shm_desc));
 #endif
 
   char buf[MAXPDSTRING];
@@ -62,7 +62,7 @@ void ofxGem :: setup(float id, int width, int height, int color)
 void ofxGem :: setup(std::string id, int width, int height, int color)
 {
 #ifndef _WIN32
-  memset(&shm_desc, 0, sizeof(shm_desc));
+  memset(&m_shm_desc, 0, sizeof(m_shm_desc));
 #endif
 
   int fake = 0;
@@ -112,7 +112,7 @@ int ofxGem :: getShm(int fake, int _width, int _height, int _color)
   // }
 
 #else
-  if(shm_id>0)freeShm();
+  if(m_shm_id>0)freeShm();
 
   if(fake<=0)return 8;
 #endif /* _WIN32 */
@@ -179,17 +179,17 @@ int ofxGem :: getShm(int fake, int _width, int _height, int _color)
    * we want to reuse it, even if its size is smaller than we requested
    */
   errno=0;
-  shm_id = shmget(fake,m_size+sizeof(t_pixshare_header), IPC_CREAT | 0666);
+  m_shm_id = shmget(fake,m_size+sizeof(t_pixshare_header), IPC_CREAT | 0666);
 
-  if((shm_id<0) && (EINVAL==errno)){
+  if((m_shm_id<0) && (EINVAL==errno)){
     errno=0;
     // the segment already exists, but is smaller than we thought!
     int id = shmget(fake,sizeof(t_pixshare_header),0666);
     if(id>0){ /* yea, we got it! */
       t_pixshare_header*h=(t_pixshare_header*)shmat(id,NULL,0666);
-      if (!shm_addr || shm_addr==(void *)-1){
-  shm_addr=NULL;
-  return 8;
+      if (!m_shm_addr || m_shm_addr==(void *)-1){
+        m_shm_addr=NULL;
+        return 8;
       }
       /* read the size of the blob from the shared segment */
       if(h&&h->size){
@@ -200,27 +200,27 @@ int ofxGem :: getShm(int fake, int _width, int _height, int _color)
         shmdt(h);
 
         /* now get the shm-segment with the correct size */
-        shm_id = shmget(fake,m_size+sizeof(t_pixshare_header), IPC_CREAT | 0666);
+        m_shm_id = shmget(fake,m_size+sizeof(t_pixshare_header), IPC_CREAT | 0666);
       }
     }
   }
 
-  if(shm_id>0){
+  if(m_shm_id>0){
     /* now that we have a shm-segment, get the pointer to the data */
-    shm_addr = (unsigned char*)shmat(shm_id,NULL,0666);
-    if (!shm_addr || shm_addr==(void *)-1){
-      shm_addr=NULL;
+    m_shm_addr = (unsigned char*)shmat(m_shm_id,NULL,0666);
+    if (!m_shm_addr || m_shm_addr==(void *)-1){
+      m_shm_addr=NULL;
       return 8;
     }
 
-    if(shmctl(shm_id,IPC_STAT,&shm_desc)<0) {
+    if(shmctl(m_shm_id,IPC_STAT,&m_shm_desc)<0) {
       return 8;
     }
     /* write the size into the shm-segment */
-    t_pixshare_header *h=(t_pixshare_header *)shm_addr;
-    h->size = (shm_desc.shm_segsz-sizeof(t_pixshare_header));
+    t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
+    h->size = (m_shm_desc.shm_segsz-sizeof(t_pixshare_header));
 
-    ofLog(OF_LOG_VERBOSE) << "shm:: id(" << shm_id << "segsz(" << shm_desc.shm_segsz << " cpid (" << shm_desc.shm_cpid << " mem(" << std::hex << shm_addr << ")";
+    ofLog(OF_LOG_VERBOSE) << "shm:: id(" << m_shm_id << "segsz(" << m_shm_desc.shm_segsz << " cpid (" << m_shm_desc.shm_cpid << " mem(" << std::hex << m_shm_addr << ")";
   } else {
     ofLog(OF_LOG_ERROR) << "couldn't get shm_id: error " << errno << ".";
     return -1; // AV : added because i'm usure of what value is returned when we get this error...
@@ -237,33 +237,33 @@ void ofxGem :: freeShm()
   if ( m_MapFile ) CloseHandle( m_MapFile );
   m_MapFile = NULL;
 #else
-  if(shm_addr){
-    if (shmdt(shm_addr) == -1) ofLog(OF_LOG_ERROR) << "shmdt failed at " << std::hex << shm_addr;
+  if(m_shm_addr){
+    if (shmdt(m_shm_addr) == -1) ofLog(OF_LOG_ERROR) << "shmdt failed at " << std::hex << m_shm_addr;
   }
-  shm_addr=NULL;
+  m_shm_addr=NULL;
 
-  if(shm_id>0){
-    if (shmctl(shm_id,IPC_STAT, &shm_desc) != -1){
-      if(shm_desc.shm_nattch<=0){
-        if (shmctl(shm_id,IPC_RMID, &shm_desc) == -1) ofLog(OF_LOG_ERROR) << "shmctl remove failed for " << shm_id;
+  if(m_shm_id>0){
+    if (shmctl(m_shm_id,IPC_STAT, &m_shm_desc) != -1){
+      if(m_shm_desc.shm_nattch<=0){
+        if (shmctl(m_shm_id,IPC_RMID, &m_shm_desc) == -1) ofLog(OF_LOG_ERROR) << "shmctl remove failed for " << m_shm_id;
       }
     }
   }
-  shm_id=0;
+  m_shm_id=0;
 #endif /* _WIN32 */
 }
 
 int ofxGem :: setPixels(ofPixels pix){
 
-  img.setFromPixels(pix);
+  m_img.setFromPixels(pix);
 
 #ifndef _WIN32
-  if(shm_id>0){
+  if(m_shm_id>0){
 #else
   if(m_MapFile){
 #endif /* _WIN32 */
 
-    if (!shm_addr){
+    if (!m_shm_addr){
       ofLog(OF_LOG_ERROR) << "no shmaddr";
       return -1;
     }
@@ -301,9 +301,9 @@ int ofxGem :: setPixels(ofPixels pix){
 
 ofPixels ofxGem :: getPixels(){
     ofPixels pix;
-    if (shm_addr) {
-      t_pixshare_header *h=(t_pixshare_header *)shm_addr;
-      unsigned char* data=shm_addr+sizeof(t_pixshare_header);
+    if (m_shm_addr) {
+      t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
+      unsigned char* data=m_shm_addr+sizeof(t_pixshare_header);
       int imgsize=h->format*h->xsize*h->ysize;
       if(imgsize){
 
@@ -323,7 +323,7 @@ ofPixels ofxGem :: getPixels(){
             return pix;
         }
         pix.setFromPixels(data, h->xsize, h->ysize, color);
-        img.setFromPixels(pix);
+        m_img.setFromPixels(pix);
       }
     } else {
       ofLog(OF_LOG_ERROR) << "no shmaddr";
@@ -332,7 +332,7 @@ ofPixels ofxGem :: getPixels(){
 }
 
 void ofxGem ::  draw( float x, float y, float w, float h ) const {
-    img.draw(x,y,w,h);
+    m_img.draw(x,y,w,h);
 }
 
 int ofxGem :: hash_str2us(std::string s) {
