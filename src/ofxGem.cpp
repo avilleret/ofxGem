@@ -101,7 +101,7 @@ void ofxGem :: setup(std::string id, int width, int height, int color)
   }
 }
 
-int ofxGem :: getShm(int fake, int _width, int _height, int _color)
+int ofxGem :: getShm(int fake, int w, int h, int c)
 {
 #ifdef _WIN32
   if ( shm_addr ) UnmapViewOfFile( shm_addr );
@@ -117,29 +117,9 @@ int ofxGem :: getShm(int fake, int _width, int _height, int _color)
   if(fake<=0)return 8;
 #endif /* _WIN32 */
 
-  ofPixelFormat color;
-  switch(_color)
-  {
-    case 1:
-      color = OF_PIXELS_MONO;
-      break;
-    case 2:
-      color = OF_PIXELS_YUY2;
-      break;
-    case 4:
-      color = OF_PIXELS_RGBA;
-      break;
-    default:
-      return 4;
-      break;
-  }
+  m_size = w*h*c;
 
-  ofPixels dummy;
-  dummy.allocate(_width, _height, color);
-
-  m_size = dummy.size();
-
-  ofLog(OF_LOG_VERBOSE) << "pix_share segment : " << _width << "x" << _height << "x" << dummy.getBytesPerPixel() << " " << m_size;
+  ofLog(OF_LOG_VERBOSE) << "pix_share segment : " << w << "x" << h << "x" << c << " " << m_size;
 
 #ifdef _WIN32
   int segmentSize=m_size+sizeof(t_pixshare_header);
@@ -270,27 +250,14 @@ int ofxGem :: setPixels(ofPixels pix){
 
   if (pix.size()>m_size) {
     ofLog(OF_LOG_VERBOSE) << "pixels data is bigger than shared memory, so we reallocate it";
-    getShm(m_fake, pix.getWidth(), pix.getHeight(), pix.getPixelFormat());
+    getShm(m_fake, pix.getWidth(), pix.getHeight(), pix.getBytesPerPixel());
   }
 
   t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
   h->size =pix.size();
   h->xsize=pix.getWidth();
   h->ysize=pix.getHeight();
-  switch (pix.getPixelFormat()){
-    case OF_PIXELS_MONO:
-      h->format = GL_LUMINANCE;
-      break;
-    case OF_PIXELS_RGBA:
-      h->format = GL_RGBA;
-      break;
-    case OF_PIXELS_YUY2:
-      h->format = GL_YCBCR_422_APPLE;
-      break;
-    default:
-      ofLog(OF_LOG_ERROR) << "format " << pix.getPixelFormat() << " is not supported (only OF_PIXELS_MONO, OF_PIXELS_RGBA or OF_PIXELS_YUY2)";
-      return -1;
-  }
+  h->format=convertPixelFormat2Gem(pix.getPixelFormat());
 
   h->upsidedown=GL_TRUE;
   memcpy(m_shm_addr+sizeof(t_pixshare_header),pix.getData(),pix.size());
@@ -307,22 +274,8 @@ ofPixels ofxGem :: getPixels(){
       int imgsize=h->format*h->xsize*h->ysize;
       if(imgsize){
 
-        ofPixelFormat color;
-        switch (h->format){
-          case GL_LUMINANCE:
-            color=OF_PIXELS_MONO;
-            break;
-          case GL_RGBA:
-            color = OF_PIXELS_RGBA;
-            break;
-          case GL_YCBCR_422_APPLE:
-            color = OF_PIXELS_YUY2;
-            break;
-          default:
-            ofLog(OF_LOG_ERROR) << "pixel format not supported : " << h->format;
-            return pix;
-        }
-        pix.setFromPixels(data, h->xsize, h->ysize, color);
+        ofPixelFormat fmt = convertPixelFormat2of(h->format);
+        pix.setFromPixels(data, h->xsize, h->ysize, fmt);
         m_img.setFromPixels(pix);
       }
     } else {
@@ -362,4 +315,40 @@ int ofxGem :: hash_str2us(std::string s) {
   }
 
   return ((unsigned short)(result) & 0x7FFFFFFF);
+}
+
+int ofxGem :: convertPixelFormat2Gem (ofPixelFormat format){
+  int gemFormat = -1;
+  switch (format){
+    case OF_PIXELS_MONO:
+      gemFormat = GL_LUMINANCE;
+      break;
+    case OF_PIXELS_RGBA:
+      gemFormat = GL_RGBA;
+      break;
+    case OF_PIXELS_YUY2:
+      gemFormat = GL_YCBCR_422_APPLE;
+      break;
+    default:
+      ofLog(OF_LOG_ERROR) << "format " << format << " is not supported (only OF_PIXELS_MONO, OF_PIXELS_RGBA or OF_PIXELS_YUY2)";
+  }
+  return gemFormat;
+}
+
+ofPixelFormat ofxGem :: convertPixelFormat2of(int gemFormat){
+  ofPixelFormat format;
+  switch (gemFormat){
+    case GL_LUMINANCE:
+      format=OF_PIXELS_MONO;
+      break;
+    case GL_RGBA:
+      format = OF_PIXELS_RGBA;
+      break;
+    case GL_YCBCR_422_APPLE:
+      format = OF_PIXELS_YUY2;
+      break;
+    default:
+      ofLog(OF_LOG_ERROR) << "pixel format not supported : " << gemFormat;
+  }
+  return format;
 }

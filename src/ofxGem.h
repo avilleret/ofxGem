@@ -59,6 +59,8 @@ protected:
 
   int getShm(int _id, int _width, int _height, int _color);
   int hash_str2us(std::string s);
+  int convertPixelFormat2Gem (ofPixelFormat format);
+  ofPixelFormat convertPixelFormat2of(int gemFormat);
 
   void freeShm();
 
