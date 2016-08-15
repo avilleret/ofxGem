@@ -37,8 +37,8 @@ class ofxGem : public ofBaseDraws {
 public:
   ofxGem();
   virtual ~ofxGem();
-  void setup(float id, int width, int height, int color);
-  void setup(std::string id, int width, int height, int color);
+  int setup(float id, int width, int height, int color);
+  int setup(std::string id, int width, int height, int color);
 
   virtual void  draw() const { draw(0,0, m_width, m_height); };
   virtual void  draw( float x, float y ) const { draw(x,y, m_width, m_height); };

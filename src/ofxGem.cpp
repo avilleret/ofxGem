@@ -14,7 +14,7 @@ ofxGem :: ~ofxGem(){
   ofxGem :: freeShm();
 }
 
-void ofxGem :: setup(float id, int width, int height, int color)
+int ofxGem :: setup(float id, int width, int height, int color)
 {
 #ifndef _WIN32
   memset(&m_shm_desc, 0, sizeof(m_shm_desc));
@@ -58,9 +58,11 @@ void ofxGem :: setup(float id, int width, int height, int color)
     ofLog(OF_LOG_ERROR) << "unknown error";
     break;
   }
+
+  return err;
 }
 
-void ofxGem :: setup(std::string id, int width, int height, int color)
+int ofxGem :: setup(std::string id, int width, int height, int color)
 {
 #ifndef _WIN32
   memset(&m_shm_desc, 0, sizeof(m_shm_desc));
@@ -100,6 +102,8 @@ void ofxGem :: setup(std::string id, int width, int height, int color)
     ofLog(OF_LOG_ERROR) << "unknown error";
     break;
   }
+
+  return err;
 }
 
 int ofxGem :: getShm(int fake, int w, int h, int c)
