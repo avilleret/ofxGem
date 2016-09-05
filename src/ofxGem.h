@@ -37,8 +37,12 @@ class ofxGem : public ofBaseDraws {
 public:
   ofxGem();
   virtual ~ofxGem();
+  // initialize internal id and allocate shared memory
   int setup(float id, int width, int height, int color);
   int setup(std::string id, int width, int height, int color);
+  // initialize internal id without allocating
+  void setup(float id);
+  void setup(std::string id);
 
   virtual void  draw() const { draw(0,0, m_width, m_height); };
   virtual void  draw( float x, float y ) const { draw(x,y, m_width, m_height); };

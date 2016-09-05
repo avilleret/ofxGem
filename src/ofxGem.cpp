@@ -14,96 +14,36 @@ ofxGem :: ~ofxGem(){
   ofxGem :: freeShm();
 }
 
-int ofxGem :: setup(float id, int width, int height, int color)
+int ofxGem :: setup(float id, int width, int height, int color){
+  setup(id);
+  return getShm(m_fake, width, height, color);
+}
+
+int ofxGem :: setup(std::string id, int width, int height, int color){
+  setup(id);
+  return getShm(m_fake, width, height, color);
+}
+
+
+void ofxGem :: setup(float id)
 {
 #ifndef _WIN32
   memset(&m_shm_desc, 0, sizeof(m_shm_desc));
 #endif
 
   char buf[MAXPDSTRING];
-  int fake = 0;
   snprintf(buf, MAXPDSTRING-1, "%g", id);
   buf[MAXPDSTRING-1]=0;
-  fake = hash_str2us(buf);
-  // fake = hash_str2us(atom_getsymbol(argv)->s_name);
-
-  int err  = getShm(fake, width, height, color);
-
-  switch(err){
-  case 0:
-    ofLog(OF_LOG_VERBOSE) << "shared memomry segment well done";
-    break;
-  case 1:
-    ofLog(OF_LOG_ERROR) << "no valid size given";
-    break;
-  case 2:
-    ofLog(OF_LOG_ERROR) <<  "given size < 0";
-    break;
-  case 3:
-    ofLog(OF_LOG_ERROR) << "no valid dimensions given";
-    break;
-  case 4:
-    ofLog(OF_LOG_ERROR) << "<color> must be one of: 4,2,1,RGBA,YUV,Grey";
-    break;
-  case 6:
-    ofLog(OF_LOG_ERROR) << "couldn't get shared memory";
-    break;
-  case 7:
-    ofLog(OF_LOG_ERROR) << "no ID given";
-    break;
-  case 8:
-    ofLog(OF_LOG_ERROR) << "invalid ID...";
-    break;
-  default:
-    ofLog(OF_LOG_ERROR) << "unknown error";
-    break;
-  }
-
-  return err;
+  m_fake = hash_str2us(buf);
 }
 
-int ofxGem :: setup(std::string id, int width, int height, int color)
+void ofxGem :: setup(std::string id)
 {
 #ifndef _WIN32
   memset(&m_shm_desc, 0, sizeof(m_shm_desc));
 #endif
 
-  int fake = 0;
-  fake = hash_str2us(id.c_str());
-
-  int err  = getShm(fake, width, height, color);
-
-  switch(err){
-  case 0:
-    ofLog(OF_LOG_VERBOSE) << "shared memomry segment well done";
-    break;
-  case 1:
-    ofLog(OF_LOG_ERROR) << "no valid size given";
-    break;
-  case 2:
-    ofLog(OF_LOG_ERROR) <<  "given size < 0";
-    break;
-  case 3:
-    ofLog(OF_LOG_ERROR) << "no valid dimensions given";
-    break;
-  case 4:
-    ofLog(OF_LOG_ERROR) << "<color> must be one of: 4,2,1,RGBA,YUV,Grey";
-    break;
-  case 6:
-    ofLog(OF_LOG_ERROR) << "couldn't get shared memory";
-    break;
-  case 7:
-    ofLog(OF_LOG_ERROR) << "no ID given";
-    break;
-  case 8:
-    ofLog(OF_LOG_ERROR) << "invalid ID...";
-    break;
-  default:
-    ofLog(OF_LOG_ERROR) << "unknown error";
-    break;
-  }
-
-  return err;
+  m_fake = hash_str2us(id.c_str());
 }
 
 int ofxGem :: getShm(int fake, int w, int h, int c)
@@ -119,7 +59,10 @@ int ofxGem :: getShm(int fake, int w, int h, int c)
 #else
   if(m_shm_id>0)freeShm();
 
-  if(fake<=0)return 8;
+  if(fake<=0){
+    ofLog(OF_LOG_ERROR) << "invalid ID...";
+    return 8;
+  }
 #endif /* _WIN32 */
 
   m_size = w*h*c;
@@ -174,6 +117,8 @@ int ofxGem :: getShm(int fake, int w, int h, int c)
       t_pixshare_header*h=(t_pixshare_header*)shmat(id,NULL,0666);
       if (!m_shm_addr || m_shm_addr==(void *)-1){
         m_shm_addr=NULL;
+        m_size=0;
+        ofLog(OF_LOG_ERROR) << "couldn't get shared memory";
         return 8;
       }
       /* read the size of the blob from the shared segment */
@@ -195,12 +140,18 @@ int ofxGem :: getShm(int fake, int w, int h, int c)
     m_shm_addr = (unsigned char*)shmat(m_shm_id,NULL,0666);
     if (!m_shm_addr || m_shm_addr==(void *)-1){
       m_shm_addr=NULL;
+      m_size=0;
+      ofLog(OF_LOG_ERROR) << "couldn't get shared memory";
       return 8;
     }
 
     if(shmctl(m_shm_id,IPC_STAT,&m_shm_desc)<0) {
+      m_shm_addr=NULL;
+      m_size=0;
+      ofLog(OF_LOG_ERROR) << "couldn't get shared memory stats (IPC_STAT)";
       return 8;
     }
+
     /* write the size into the shm-segment */
     t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
     h->size = (m_shm_desc.shm_segsz-sizeof(t_pixshare_header));
@@ -208,6 +159,8 @@ int ofxGem :: getShm(int fake, int w, int h, int c)
     ofLog(OF_LOG_VERBOSE) << "shm:: id(" << m_shm_id << "segsz(" << m_shm_desc.shm_segsz << " cpid (" << m_shm_desc.shm_cpid << " mem(" << std::hex << m_shm_addr << ")";
   } else {
     ofLog(OF_LOG_ERROR) << "couldn't get shm_id: error " << errno << ".";
+    m_shm_addr=NULL;
+    m_size=0;
     return -1; // AV : added because i'm usure of what value is returned when we get this error...
   }
 #endif /* _WIN32 */
@@ -240,6 +193,8 @@ void ofxGem :: freeShm()
 
 int ofxGem :: setPixels(ofPixels pix){
 
+  if (!pix.isAllocated()) return -1;
+
   m_img.setFromPixels(pix);
 
 #ifndef _WIN32
@@ -248,14 +203,14 @@ int ofxGem :: setPixels(ofPixels pix){
   if(m_MapFile){
 #endif /* _WIN32 */
 
-    if (!m_shm_addr){
-      ofLog(OF_LOG_ERROR) << "no shmaddr";
-      return -1;
-    }
-
   if (pix.size()>m_size) {
     ofLog(OF_LOG_VERBOSE) << "pixels data is bigger than shared memory, so we reallocate it";
     getShm(m_fake, pix.getWidth(), pix.getHeight(), pix.getBytesPerPixel());
+  }
+
+  if (!m_shm_addr || m_shm_addr==(void *)-1){
+    ofLog(OF_LOG_ERROR) << "no shmaddr";
+    return -1;
   }
 
   t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
