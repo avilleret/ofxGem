@@ -44,32 +44,30 @@ public:
   void setup(float id);
   void setup(std::string id);
 
-  virtual void  draw() const { draw(0,0, m_width, m_height); };
-  virtual void  draw( float x, float y ) const { draw(x,y, m_width, m_height); };
+  virtual void  draw() const { draw(0,0, m_img.getWidth(), m_img.getHeight()); };
+  virtual void  draw( float x, float y ) const { draw(x,y, m_img.getWidth(), m_img.getHeight()); };
   virtual void  draw( float x, float y, float w, float h ) const;
 
   virtual void update();
-  virtual float getWidth() const { return m_width; };
-  virtual float getHeight() const { return m_height; };
-  virtual float getColor() const { return m_color; };
+
+  virtual float getWidth() const { return m_img.getWidth(); };
+  virtual float getHeight() const { return m_img.getHeight(); };
   virtual float getShmaddr() const { return m_fake; };
 
   ofPixels& getPixels();
   int setPixels(ofPixels);
 protected:
-  int m_width;
-  int m_height;
-  int m_color;
   int m_fake;
 
   int getShm(int _id, int _width, int _height, int _color);
   int hash_str2us(std::string s);
   int convertPixelFormat2Gem (ofPixelFormat format);
-  ofPixelFormat convertPixelFormat2of(int gemFormat);
+  static ofPixelFormat convertPixelFormat2of(int gemFormat);
 
   void freeShm();
 
   ofImage m_img;
+  ofPixels m_pix;
 
   unsigned char *m_shm_addr;
 #ifndef _WIN32

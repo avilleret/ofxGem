@@ -299,7 +299,7 @@ int ofxGem :: convertPixelFormat2Gem (ofPixelFormat format){
   return gemFormat;
 }
 
-ofPixelFormat ofxGem :: convertPixelFormat2of(int gemFormat){
+ofPixelFormat ofxGem :: convertPixelFormat2of(int gemFormat) {
   ofPixelFormat format;
   switch (gemFormat){
     case GL_LUMINANCE:
