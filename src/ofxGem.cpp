@@ -248,7 +248,8 @@ void ofxGem::update(){
 }
 
 void ofxGem ::  draw( float x, float y, float w, float h ) const {
-    m_img.draw(x,y,w,h);
+    if (m_img.isAllocated()) m_img.draw(x,y,w,h);
+    else ofLogVerbose(__func__) << "img is not allocated !";
 }
 
 int ofxGem :: hash_str2us(std::string s) {
