@@ -226,22 +226,25 @@ int ofxGem :: setPixels(ofPixels pix){
 }
 
 
-ofPixels ofxGem :: getPixels(){
-    ofPixels pix;
+ofPixels& ofxGem :: getPixels(){
+    return m_pix;
+}
+
+void ofxGem::update(){
     if (m_shm_addr) {
       t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
       unsigned char* data=m_shm_addr+sizeof(t_pixshare_header);
       int imgsize=h->format*h->xsize*h->ysize;
+      ofLogVerbose(__func__) << "size: " << h->xsize << "x" << h->ysize << " " << h->format;
       if(imgsize){
 
         ofPixelFormat fmt = convertPixelFormat2of(h->format);
-        pix.setFromPixels(data, h->xsize, h->ysize, fmt);
-        m_img.setFromPixels(pix);
+        m_pix.setFromPixels(data, h->xsize, h->ysize, fmt);
+        m_img.setFromPixels(m_pix);
       }
     } else {
       ofLog(OF_LOG_ERROR) << "no shmaddr";
     }
-    return pix;
 }
 
 void ofxGem ::  draw( float x, float y, float w, float h ) const {

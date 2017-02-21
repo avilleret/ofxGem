@@ -48,12 +48,13 @@ public:
   virtual void  draw( float x, float y ) const { draw(x,y, m_width, m_height); };
   virtual void  draw( float x, float y, float w, float h ) const;
 
+  virtual void update();
   virtual float getWidth() const { return m_width; };
   virtual float getHeight() const { return m_height; };
   virtual float getColor() const { return m_color; };
   virtual float getShmaddr() const { return m_fake; };
 
-  ofPixels getPixels();
+  ofPixels& getPixels();
   int setPixels(ofPixels);
 protected:
   int m_width;
