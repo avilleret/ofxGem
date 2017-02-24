@@ -235,7 +235,6 @@ void ofxGem::update(){
       t_pixshare_header *h=(t_pixshare_header *)m_shm_addr;
       unsigned char* data=m_shm_addr+sizeof(t_pixshare_header);
       int imgsize=h->format*h->xsize*h->ysize;
-      ofLogVerbose(__func__) << "size: " << h->xsize << "x" << h->ysize << " " << h->format;
       if(imgsize){
 
         ofPixelFormat fmt = convertPixelFormat2of(h->format);
